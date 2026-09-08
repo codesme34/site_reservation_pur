@@ -1,3 +1,39 @@
+// ──────────────────────────────────────────────
+// Accessibilite : bouton flottant "police pour dyslexiques" (OpenDyslexic)
+// present sur toutes les pages, choix retenu en localStorage
+// ──────────────────────────────────────────────
+(function initDyslexiaToggle() {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'dyslexia-toggle';
+    btn.setAttribute('aria-pressed', 'false');
+    btn.setAttribute('aria-label', 'Activer la police adaptee aux personnes dyslexiques');
+    btn.title = 'Police pour dyslexie';
+    btn.innerHTML = '<i class="fa-solid fa-book-open-reader"></i>';
+    document.body.appendChild(btn);
+
+    let enabled = false;
+    try {
+        enabled = localStorage.getItem('dyslexia_mode') === 'true';
+    } catch (e) { /* localStorage indisponible, on ignore */ }
+
+    function applyState(isActive) {
+        document.body.classList.toggle('dyslexia-mode', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        btn.classList.toggle('active', isActive);
+    }
+
+    applyState(enabled);
+
+    btn.addEventListener('click', function () {
+        const isActive = !document.body.classList.contains('dyslexia-mode');
+        applyState(isActive);
+        try {
+            localStorage.setItem('dyslexia_mode', isActive ? 'true' : 'false');
+        } catch (e) { /* localStorage indisponible, on ignore */ }
+    });
+})();
+
 function switchTab(tab) {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       document.getElementById('panel-' + tab).classList.add('active');

@@ -3264,3 +3264,167 @@ body > main {
     padding: 20px 16px 40px;
   }
 }
+
+/* ──────────────────────────────────────────────── */
+/* ACCESSIBILITE - Police pour dyslexiques (OpenDyslexic) */
+/* ──────────────────────────────────────────────── */
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('/static/assets/fonts/opendyslexic-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'OpenDyslexic';
+  src: url('/static/assets/fonts/opendyslexic-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Applique la police uniquement aux elements de texte, jamais aux icones
+   (les icones Font Awesome utilisent leur propre police de glyphes) */
+body.dyslexia-mode,
+body.dyslexia-mode p,
+body.dyslexia-mode span,
+body.dyslexia-mode a,
+body.dyslexia-mode label,
+body.dyslexia-mode input,
+body.dyslexia-mode select,
+body.dyslexia-mode textarea,
+body.dyslexia-mode button,
+body.dyslexia-mode h1,
+body.dyslexia-mode h2,
+body.dyslexia-mode h3,
+body.dyslexia-mode li,
+body.dyslexia-mode td,
+body.dyslexia-mode th {
+  font-family: 'OpenDyslexic', sans-serif !important;
+  letter-spacing: 0.3px;
+}
+
+.dyslexia-toggle {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--color-navy, #0a2342);
+  color: #fff;
+  border: none;
+  font-size: 19px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.dyslexia-toggle:hover {
+  transform: scale(1.06);
+}
+
+.dyslexia-toggle.active {
+  background: #febb02;
+  color: #1a1a1a;
+}
+
+@media (max-width: 540px) {
+  .dyslexia-toggle {
+    left: 14px;
+    bottom: 14px;
+    width: 44px;
+    height: 44px;
+    font-size: 17px;
+  }
+}
+
+/* ──────────────────────────────────────────────── */
+/* Carrousel destinations (Swiper.js) */
+/* ──────────────────────────────────────────────── */
+.destinations-carousel {
+  padding: 40px 5% 60px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.destinations-carousel .catalog-headline {
+  margin-bottom: 24px;
+}
+
+.destinations-swiper {
+  padding-bottom: 44px !important;
+}
+
+.destinations-swiper .swiper-slide {
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-card, 0 2px 12px rgba(10,35,66,.10));
+  background: #fff;
+}
+
+.destinations-swiper .slide-img-wrap {
+  position: relative;
+  height: 220px;
+}
+
+.destinations-swiper .slide-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.destinations-swiper .slide-price {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: var(--color-red, #d0021b);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 5px 12px;
+  border-radius: 6px;
+}
+
+.destinations-swiper .slide-body {
+  padding: 14px 16px 18px;
+}
+
+.destinations-swiper .slide-body h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-navy, #0a2342);
+  margin: 0 0 4px;
+}
+
+.destinations-swiper .slide-body p {
+  font-size: 12.5px;
+  color: var(--color-muted, #6c757d);
+  margin: 0;
+}
+
+.destinations-swiper .swiper-button-next,
+.destinations-swiper .swiper-button-prev {
+  color: var(--color-navy, #0a2342);
+  background: #fff;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+}
+
+.destinations-swiper .swiper-button-next::after,
+.destinations-swiper .swiper-button-prev::after {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.destinations-swiper .swiper-pagination-bullet-active {
+  background: var(--color-navy, #0a2342);
+}

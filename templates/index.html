@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/static/css/styles.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
+  <link rel="stylesheet" href="/static/vendor/swiper/swiper-bundle.min.css">
 </head>
 
 <body>
@@ -305,6 +306,34 @@
     </div>
 
   </section>
+
+  <!-- Carrousel "Coups de coeur" - Swiper.js -->
+  <section class="destinations-carousel">
+    <div class="catalog-headline">
+      <div class="catalog-kicker">Selection du moment</div>
+      <h2 class="catalog-title">Nos <em>coups de coeur</em></h2>
+    </div>
+
+    <div class="swiper destinations-swiper">
+      <div class="swiper-wrapper">
+        {% for hotel in hotels[:8] %}
+        <div class="swiper-slide">
+          <div class="slide-img-wrap">
+            <img src="{{ hotel.photos }}" alt="{{ hotel.nom }}" loading="lazy">
+            <span class="slide-price">{{ hotel.tarifs }} € /nuit</span>
+          </div>
+          <div class="slide-body">
+            <h3>{{ hotel.nom }}</h3>
+            <p><i class="fa-solid fa-location-dot"></i> {{ hotel.ville }}, {{ hotel.pays }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="swiper-pagination"></div>
+      <div class="swiper-button-prev"></div>
+      <div class="swiper-button-next"></div>
+    </div>
+  </section>
   </main>
 
     <footer class="site-footer">
@@ -317,6 +346,33 @@
     </footer>
 
   <script src="static/js/script.js"></script>
+  <script src="/static/vendor/swiper/swiper-bundle.min.js"></script>
+  <script>
+    // Carrousel "Coups de coeur" - librairie externe Swiper.js
+    // Choisie car elle gere nativement le swipe tactile (mobile), le clavier,
+    // la pagination et les fleches, sans avoir a recoder cette logique a la main.
+    if (document.querySelector('.destinations-swiper')) {
+      new Swiper('.destinations-swiper', {
+        slidesPerView: 1.15,
+        spaceBetween: 16,
+        loop: false,
+        pagination: {
+          el: '.destinations-swiper .swiper-pagination',
+          clickable: true
+        },
+        navigation: {
+          nextEl: '.destinations-swiper .swiper-button-next',
+          prevEl: '.destinations-swiper .swiper-button-prev'
+        },
+        keyboard: { enabled: true },
+        breakpoints: {
+          640: { slidesPerView: 2.2, spaceBetween: 20 },
+          960: { slidesPerView: 3.2, spaceBetween: 24 },
+          1280: { slidesPerView: 4, spaceBetween: 24 }
+        }
+      });
+    }
+  </script>
 </body>
 
 </html>
