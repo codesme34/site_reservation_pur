@@ -29,7 +29,10 @@ class CompteClient(ModeleBase):
     def trouver_par_id(cls, compte_id):
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, nom, prenom, email, is_admin FROM compte_client WHERE id = %s", (compte_id,))
+        cursor.execute(
+            "SELECT id, nom, prenom, email, is_admin, mdp FROM compte_client WHERE id = %s",
+            (compte_id,)
+        )
         ligne = cursor.fetchone()
         cursor.close()
         conn.close()

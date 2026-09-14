@@ -122,7 +122,12 @@ C'était noté 0/3 au premier passage - ce point n'avait pas du tout été trait
 
 **Information de l'utilisateur (Cr 3.d.2)** : le site a une page "Politique de confidentialité" (`confidentialite.html`) accessible depuis le pied de page de chaque page, qui explique quelles données sont collectées et pourquoi.
 
-**Droit de consultation/modification/suppression (Cr 3.d.3)** : c'est directement ce que couvre l'espace admin qu'on construit pour ce bloc - lister, modifier et supprimer n'importe quel compte client. Dans un cas réel, si un client demande la suppression de ses données (droit RGPD), l'administrateur peut l'exécuter immédiatement via cette interface, sur la même base de données que le reste du site.
+**Droit de consultation/modification/suppression (Cr 3.d.3)** : chaque client dispose, depuis son propre espace (`/client`), d'un accès direct en libre-service à ses données - sans passer par un administrateur :
+- **Consultation** : ses informations (nom, prénom, email) sont affichées dès la connexion
+- **Modification** : un formulaire lui permet de les mettre à jour lui-même
+- **Suppression** : il peut supprimer définitivement son propre compte, avec confirmation obligatoire par son mot de passe (pour éviter qu'un tiers avec une session volée puisse supprimer le compte sans connaître le mot de passe) - la suppression retire aussi ses réservations liées et invalide sa session immédiatement
+
+L'espace admin conserve en plus la possibilité de gérer n'importe quel compte (utile pour un administrateur qui traite une demande par un autre canal, ex: email), mais ce n'est plus le seul chemin possible - le client n'a besoin de personne pour exercer ses droits.
 
 **Protection des données sensibles (Cr 3.d.4)** :
 - Le mot de passe n'est **jamais stocké en clair** : il est haché avec `bcrypt` avant d'être écrit en base (déjà en place, voir la colonne `mdp` de `compte_client`, qui contient un hash du type `$2b$12$...`, jamais le mot de passe original)
@@ -252,6 +257,54 @@ C'est le deuxième point précis reproché au premier passage ("aucun rôle util
 
 ---
 
+### C4.f : Travailler en équipe en utilisant des outils de collaboration et de gestion des versions afin de construire une application efficacement au sein d'une équipe de développeurs en entreprise
+
+**CE QUI ETAIT ATTENDU**
+
+- Cr 4.f.1 : Le candidat mobilise et transmet son savoir, son savoir-faire et ses méthodes. Il participe activement à la collaboration
+- Cr 4.f.2 : L'utilisation de l'outil de travail collaboratif est maîtrisée (ex: Gitlab)
+- Cr 4.f.3 : Le candidat sait auto-évaluer et mesurer la compatibilité de son code avant de le soumettre comme contribution au projet
+- Cr 4.f.4 : Le candidat peut clairement rendre compte de sa participation individuelle au travail collectif
+
+**CE QUE J'AI FAIT**
+
+Ce projet est réalisé en solo (contexte d'examen), mais avec la même discipline Git que j'appliquerais en équipe :
+
+**Outil collaboratif maîtrisé (Cr 4.f.2)** : dépôt Git hébergé sur GitHub, séparé du dépôt du Bloc 3 (`site_reservation_pur` pour le natif, `site_reservation_sql` pour la version framework) - pour ne pas mélanger deux architectures différentes dans le même historique. Authentification par clé SSH, commits réguliers au fur et à mesure de l'avancement plutôt qu'un seul gros commit final.
+
+**Auto-évaluation avant contribution (Cr 4.f.3)** : chaque fonctionnalité a été testée avant d'être considérée comme terminée - pas seulement "ça s'affiche", mais un vrai test du parcours complet (ex: connexion → accès admin → ajout → vérification en base → modification → suppression) avant de passer à la suite. Plusieurs bugs ont été trouvés et corrigés à cette étape (route GET manquante, requête SQL incomplète, gestion incohérente des réponses HTTP) - c'est-à-dire exactement la démarche qu'on attend avant de pousser du code partagé à une équipe, pour ne pas casser le travail des autres.
+
+**Rendre compte de sa contribution (Cr 4.f.4)** : c'est l'objet même de ce document - chaque section explique précisément ce qui a été fait et pourquoi, compétence par compétence, avec les fichiers concernés cités à chaque fois.
+
+-> historique Git du dépôt `site_reservation_pur` (commits `mise a jour et correction mobile`, `mise a jour du schema et des relations`, `mise en place des routes`, `reorganisation du code`)
+
+---
+
+### C4.g : Préparer l'application pour la livraison en s'assurant de sa conformité à la demande du client et son bon fonctionnement
+
+**CE QUI ETAIT ATTENDU**
+
+- Cr 4.g.1 : Le candidat s'assure de la conformité des fonctionnalités attendues par le cahier des charges et celles déployées
+- Cr 4.g.2 : Des tests unitaires sont réalisés et validés
+- Cr 4.g.3 : L'application mise en ligne est exempte de bugs et fonctionnelle
+- Cr 4.g.4 : L'application est testée en production et ne montre pas d'erreurs ou d'effets de bords pouvant nuire à son utilisation
+
+**CE QUE J'AI FAIT**
+
+**Conformité (Cr 4.g.1)** : le périmètre retenu (voir C4.a) répond précisément aux deux manques identifiés par le jury au premier passage - code natif sans framework, rôles utilisateur, CRUD complet (ajouter/modifier/supprimer). Chaque fonctionnalité listée dans le schéma fonctionnel a été implémentée et vérifiée avant d'être considérée comme terminée.
+
+**Tests unitaires (Cr 4.g.2)** : `test_unitaire.py`, écrit avec le module natif `unittest` (aucune dépendance externe type pytest), couvre la logique isolée de la base de données et du réseau :
+- `echapper()` : neutralisation correcte des balises HTML et apostrophes (protection XSS)
+- `trop_de_requetes()` : autorisation sous la limite, blocage au-delà, indépendance entre deux IP différentes
+- `get_session()` : absence de cookie, jeton inconnu, session valide retrouvée, session expirée nettoyée automatiquement
+
+10 tests, tous validés (`python3 -m unittest test_unitaire -v`). En complément, chaque fonctionnalité a aussi été vérifiée par des tests fonctionnels bout-en-bout pendant le développement (requêtes HTTP réelles simulant un visiteur : connexion, CRUD admin, self-service client, séparation des rôles) - plusieurs bugs ont été trouvés et corrigés grâce à cette double approche (ex: route manquante, requête SQL incomplète, fuite entre espace admin et client).
+
+**Mise en ligne et test en production (Cr 4.g.3 / Cr 4.g.4)** : *[à compléter une fois le déploiement effectué - lien de l'application en ligne + vérification qu'elle fonctionne sans erreur en conditions réelles]*
+
+-> `test_unitaire.py`
+
+---
+
 ## À venir dans ce document
-- [ ] C4.f : Travail avec Git
-- [ ] C4.g : Livraison et conformité
+- [ ] Lien de l'application déployée + vérification finale en production

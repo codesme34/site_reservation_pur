@@ -19,6 +19,7 @@ def vue_admin_dashboard(comptes):
 
     return f"""
     <h1>Gestion des comptes</h1>
+    <a href="/logout">Déconnexion</a>
     <table border="1">
         <tr><th>ID</th><th>Nom</th><th>Prenom</th><th>Email</th><th>Role</th></tr>
         {lignes_html}

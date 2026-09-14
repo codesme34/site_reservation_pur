@@ -10,7 +10,8 @@ import secrets
 import time
 
 from models import CompteClient
-from views import vue_login, vue_admin_dashboard, vue_modifier_compte
+from views import vue_login, vue_admin_dashboard, vue_modifier_compte, vue_client_dashboard
+from Database.weather_api import get_weather_for_city
 
 
 DUREE_SESSION = 30 * 60  # 30 minutes
@@ -97,7 +98,116 @@ def route(path, methods=("GET",)):
 
 @route("/")
 def home(handler):
-    return "Ça marche !"
+    """Simple aiguillage selon le role - aucun affichage propre ici."""
+    session = get_session(handler)
+
+    if session is None:
+        destination = "/login"
+    elif session["is_admin"]:
+        destination = "/admin"
+    else:
+        destination = "/client"
+
+    handler.send_response(302)
+    handler.send_header("Location", destination)
+    handler.end_headers()
+    return None
+
+
+@route("/client")
+def client_dashboard(handler):
+    session = get_session(handler)
+    if session is None:
+        handler.send_response(302)
+        handler.send_header("Location", "/login")
+        handler.end_headers()
+        return None
+
+    if session["is_admin"]:
+        # l'espace client est reserve aux comptes non-admin : un admin qui
+        # tape /client a la main est renvoye vers son propre espace
+        handler.send_response(302)
+        handler.send_header("Location", "/admin")
+        handler.end_headers()
+        return None
+
+    compte = CompteClient.trouver_par_id(session["id"])
+    meteo_paris = get_weather_for_city("Paris")
+
+    return vue_client_dashboard(compte, meteo_paris)
+
+
+@route("/client/modifier", methods=("POST",))
+def client_modifier(handler, body):
+    session = get_session(handler)
+    if session is None:
+        handler.send_response(302)
+        handler.send_header("Location", "/login")
+        handler.end_headers()
+        return
+
+    data = parse_qs(body)
+    nom = data.get("nom", [""])[0]
+    prenom = data.get("prenom", [""])[0]
+    email = data.get("email", [""])[0]
+
+    compte = CompteClient.trouver_par_id(session["id"])
+    if compte is not None:
+        # un client ne peut modifier que ses propres nom/prenom/email,
+        # jamais son propre statut is_admin (contrairement au formulaire admin)
+        compte.modifier(nom, prenom, email, compte.is_admin)
+
+    handler.send_response(302)
+    handler.send_header("Location", "/client")
+    handler.end_headers()
+
+
+@route("/client/supprimer", methods=("POST",))
+def client_supprimer(handler, body):
+    session = get_session(handler)
+    if session is None:
+        handler.send_response(302)
+        handler.send_header("Location", "/login")
+        handler.end_headers()
+        return
+
+    data = parse_qs(body)
+    password = data.get("password", [""])[0]
+
+    compte = CompteClient.trouver_par_id(session["id"])
+    if compte is None or not compte.verifier_mot_de_passe(password):
+        handler.send_response(401)
+        handler.send_header("Content-Type", "text/html; charset=utf-8")
+        handler.end_headers()
+        handler.wfile.write(b"Mot de passe incorrect, compte non supprime. <a href='/client'>Retour</a>")
+        return
+
+    compte.supprimer()
+
+    # on invalide la session immediatement (le compte n'existe plus)
+    token = handler.headers.get("Cookie", "")
+    for morceau in token.split(";"):
+        if morceau.strip().startswith("session="):
+            SESSIONS.pop(morceau.strip().split("=", 1)[1], None)
+
+    handler.send_response(302)
+    handler.send_header("Set-Cookie", "session=; Max-Age=0; Path=/")
+    handler.send_header("Location", "/login")
+    handler.end_headers()
+
+
+@route("/logout")
+def logout(handler):
+    cookie_header = handler.headers.get("Cookie", "")
+    for morceau in cookie_header.split(";"):
+        if morceau.strip().startswith("session="):
+            SESSIONS.pop(morceau.strip().split("=", 1)[1], None)
+
+    handler.send_response(302)
+    handler.send_header("Set-Cookie", "session=; Max-Age=0; Path=/")
+    handler.send_header("Location", "/login")
+    handler.end_headers()
+    return None
 
 
 @route("/login")
@@ -130,7 +240,7 @@ def login_submit(handler, body):
         "expire_a": time.time() + DUREE_SESSION,
     }
 
-    destination = "/admin" if compte.is_admin else "/"
+    destination = "/admin" if compte.is_admin else "/client"
 
     handler.send_response(302)
     handler.send_header("Set-Cookie", f"session={token}; HttpOnly; Path=/")
@@ -214,6 +324,15 @@ def admin_modifier_submit(handler, body):
     email = data.get("email", [""])[0]
     is_admin = "is_admin" in data
 
+    # un admin ne peut pas se retirer lui-meme ses droits (protection anti-lockout :
+    # il faut qu'un AUTRE admin le fasse depuis son propre compte)
+    if str(compte_id) == str(session["id"]) and not is_admin:
+        handler.send_response(400)
+        handler.send_header("Content-Type", "text/html; charset=utf-8")
+        handler.end_headers()
+        handler.wfile.write(b"Vous ne pouvez pas retirer vos propres droits administrateur. <a href='/admin'>Retour</a>")
+        return
+
     compte = CompteClient.trouver_par_id(compte_id)
     if compte is not None:
         compte.modifier(nom, prenom, email, is_admin)
@@ -236,6 +355,15 @@ def admin_supprimer(handler, body):
 
     data = parse_qs(body)
     compte_id = data.get("id", [""])[0]
+
+    # un admin ne peut pas supprimer son propre compte depuis cette page
+    # (il doit utiliser son propre espace client pour ca, cf. /client/supprimer)
+    if str(compte_id) == str(session["id"]):
+        handler.send_response(400)
+        handler.send_header("Content-Type", "text/html; charset=utf-8")
+        handler.end_headers()
+        handler.wfile.write(b"Vous ne pouvez pas supprimer votre propre compte depuis cette page. <a href='/admin'>Retour</a>")
+        return
 
     compte = CompteClient.trouver_par_id(compte_id)
     if compte is not None:
