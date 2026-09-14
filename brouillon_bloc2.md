@@ -188,9 +188,70 @@ Le serveur est écrit en Python pur, avec uniquement des modules de la biblioth�
 
 ---
 
+### C4.c : Développer une application en utilisant la programmation orientée objet et les héritages afin de produire un code réutilisable et structuré
+
+**CE QUI ETAIT ATTENDU**
+
+- Cr 4.c.1 : La portée des attributs et des méthodes est cohérente
+- Cr 4.c.2 : Le code implémente des classes génériques et de l'héritage est correctement mis en place
+- Cr 4.c.3 : Les classes sont implémentées en utilisant les namespaces et chargées par l'intermédiaire d'un autoloader, à défaut, elles sont chargées manuellement dans un fichier de configuration
+
+**CE QUE J'AI FAIT**
+
+**Héritage (Cr 4.c.2)** : `ModeleBase` (`models/base.py`) est une classe générique qui porte le comportement commun à tous les modèles (ici, `supprimer_par_id`, qui construit une requête `DELETE` à partir de l'attribut `table` défini par la sous-classe). `CompteClient` (`models/compte_client.py`) hérite de `ModeleBase` et réutilise cette méthode (`super().supprimer_par_id(self.id)`) plutôt que de la réécrire. Le principe est pensé pour être réutilisable : un futur modèle `Hotel` héritera de la même classe mère sans dupliquer ce code.
+
+**Portée cohérente des attributs (Cr 4.c.1)** : les attributs publics (`id`, `nom`, `prenom`, `email`, `is_admin`) sont accessibles directement, alors que le hash du mot de passe (`_mdp_hash`) est préfixé d'un underscore - convention Python pour signaler "usage interne", jamais exposé ni utilisé en dehors de `verifier_mot_de_passe()`.
+
+**Namespaces et chargement (Cr 4.c.3)** : Python n'a pas de mot-clé `namespace` comme PHP, mais son système de **modules et paquets** joue exactement ce rôle - chaque fichier est un espace de noms séparé, et un dossier contenant un `__init__.py` (`models/`, `views/`) est un paquet. Il n'y a pas non plus d'autoloader séparé à configurer : c'est le système d'import de Python (`from models import CompteClient`) qui charge et résout les classes automatiquement dès qu'elles sont utilisées - la fonctionnalité est native au langage, pas une bibliothèque à ajouter.
+
+-> `models/base.py`, `models/compte_client.py`, `models/__init__.py`
+
+---
+
+### C4.d : Développer une application à l'aide d'une architecture Modèle-Vue-Contrôleur (MVC) afin d'assurer un code facile à maintenir et évolutif
+
+**CE QUI ETAIT ATTENDU**
+
+- Cr 4.d.1 : Le modèle gère les interactions avec la base de données
+- Cr 4.d.2 : Les contrôleurs implémentent la logique et préparent les variables nécessaires au rendu de la vue
+- Cr 4.d.3 : La vue reçoit et permet l'affichage des données transmises par le contrôleur et remplit son rôle principal d'affichage
+
+**CE QUE J'AI FAIT**
+
+Le projet est découpé en 3 dossiers/fichiers avec une responsabilité stricte chacun :
+
+- **Modèle** (`models/`) : seul endroit du projet qui contient des requêtes SQL. Ni `app.py` ni `views/` n'accèdent directement à la base.
+- **Contrôleur** (`app.py`) : chaque fonction de route lit la requête HTTP (formulaire, cookie), appelle le modèle (`CompteClient.trouver_par_email(...)`, `compte.modifier(...)`), puis transmet le résultat à une vue. Aucune requête SQL ni construction de HTML directement ici.
+- **Vue** (`views/`) : uniquement des fonctions qui reçoivent des objets déjà prêts (ex: une liste de `CompteClient`) et renvoient une chaîne HTML. Aucun accès à la base de données.
+
+Exemple concret du flux complet pour `/admin` : le contrôleur `admin_dashboard` vérifie la session, demande au modèle `CompteClient.lister_tous()` la liste des comptes (des objets Python, pas du HTML ni du SQL brut), puis passe cette liste à `vue_admin_dashboard()` qui se charge uniquement de l'affichage.
+
+-> `models/`, `views/`, `app.py`
+
+---
+
+### C4.e : Identifier un utilisateur et délimiter ses champs d'action dans le but de sécuriser l'application par l'attribution de rôles spécifiques
+
+**CE QUI ETAIT ATTENDU**
+
+- Cr 4.e.1 : Le programme protège l'intégrité des données en empêchant toute injection d'éléments pouvant les compromettre
+- Cr 4.e.2 : Un utilisateur s'authentifie par l'intermédiaire d'un identifiant unique et d'un mot de passe, avec un système de session/token pour l'identifier une fois connecté
+- Cr 4.e.3 : L'implémentation de différents rôles permet une délimitation des actions et permissions pour chaque type d'utilisateur
+
+**CE QUE J'AI FAIT**
+
+C'est le deuxième point précis reproché au premier passage ("aucun rôle utilisateur n'est défini").
+
+**Protection contre l'injection (Cr 4.e.1)** : toutes les requêtes SQL du modèle utilisent des requêtes paramétrées (`%s`), jamais de concaténation de texte. Le HTML affiché (noms, emails saisis par les utilisateurs) passe systématiquement par `echapper()` avant d'être inséré dans une page.
+
+**Authentification (Cr 4.e.2)** : identifiant unique = l'email (`UNIQUE` en base), mot de passe vérifié via `bcrypt.checkpw()` contre le hash stocké. Une fois authentifié, un jeton de session aléatoire (`secrets.token_hex(32)`) est généré et stocké côté serveur (dictionnaire `SESSIONS`), avec une expiration de 30 minutes. Le navigateur ne reçoit que ce jeton opaque via un cookie `HttpOnly`, jamais les vraies informations du compte.
+
+**Rôles et permissions (Cr 4.e.3)** : le champ `is_admin` détermine le rôle. `admin_requis()` bloque (403) l'accès aux routes `/admin/*` pour tout compte dont `is_admin` est faux - vérifié à chaque requête, pas seulement au moment de la connexion. Un client normal ne peut donc jamais atteindre l'espace de gestion des comptes, même en devinant l'URL directement.
+
+-> `app.py` (fonctions `admin_requis`, `get_session`, `login_submit`)
+
+---
+
 ## À venir dans ce document
-- [ ] C4.c : Programmation orientée objet
-- [ ] C4.d : Architecture MVC
-- [ ] C4.e : Identification utilisateur et rôles
 - [ ] C4.f : Travail avec Git
 - [ ] C4.g : Livraison et conformité
